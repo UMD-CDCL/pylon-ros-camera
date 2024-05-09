@@ -184,24 +184,32 @@ PylonROS2Camera* PylonROS2Camera::create(const std::string& device_user_id_to_op
         // Before using any pylon methods, the pylon runtime must be initialized.
         Pylon::PylonInitialize();
         Pylon::CTlFactory& tl_factory = Pylon::CTlFactory::GetInstance();
-        Pylon::
 
-        Pylon::ITransportLayer* ptl =  tl_factory.CreateTl(Pylon::BaslerGenTlBlazeDeviceClass);
+        // Pylon::ITransportLayer* ptl =  tl_factory.CreateTl(Pylon::BaslerGenTlBlazeDeviceClass);
 
-        
+        Pylon::IGigETransportLayer* gTL = dynamic_cast<Pylon::IGigETransportLayer*>(tl_factory.CreateTl(Pylon::BaslerGenTlBlazeDeviceClass));
+
+        // make sure the GigE transport layer was created
+        if (gTL == NULL) {
+            RCLCPP_ERROR_ONCE(LOGGER, "No GigE transport layer available.");
+            return nullptr;
+        }
+
         // create a device info object with specified IP
-        Pylon::CDeviceInfo required_device_info = ptl->CreateDeviceInfo();
+        Pylon::CDeviceInfo required_device_info = gTL->CreateDeviceInfo();
 
         const Pylon::String_t CAMERA_IP = "192.168.50.7";
-        const Pylon::String_t CAMERA_SUBNET = "255.255.255.0";
+        // const Pylon::String_t CAMERA_SUBNET = "255.255.255.0";
         const Pylon::String_t SERIAL = "24486655";
-        required_device_info.SetIpAddress(CAMERA_IP);
+        // required_device_info.SetIpAddress(CAMERA_IP);
         // required_device_info.SetSubnetAddress(CAMERA_SUBNET);
         // required_device_info.SetSubnetMask(CAMERA_SUBNET);  // not sure what the difference here is
 
-        // required_device_info.SetSerialNumber(SERIAL);
+        required_device_info.SetSerialNumber(SERIAL);
 
-        tl_factory.AnnounceRemoteDevice(CAMERA_IP);
+        gTL->AnnounceRemoteDevice(CAMERA_IP);
+
+        //tl_factory.AnnounceRemoteDevice(CAMERA_IP);
 
         RCLCPP_INFO_STREAM(LOGGER, "Trying to create camera_device object...");
 
