@@ -184,80 +184,111 @@ PylonROS2Camera* PylonROS2Camera::create(const std::string& device_user_id_to_op
         // Before using any pylon methods, the pylon runtime must be initialized.
         Pylon::PylonInitialize();
         Pylon::CTlFactory& tl_factory = Pylon::CTlFactory::GetInstance();
+        Pylon::
 
-        Pylon::DeviceInfoList_t device_list;
+        Pylon::ITransportLayer* ptl =  tl_factory.CreateTl(Pylon::BaslerGenTlBlazeDeviceClass);
+
+        
+        // create a device info object with specified IP
+        Pylon::CDeviceInfo required_device_info = ptl->CreateDeviceInfo();
+
+        const Pylon::String_t CAMERA_IP = "192.168.50.7";
+        const Pylon::String_t CAMERA_SUBNET = "255.255.255.0";
+        const Pylon::String_t SERIAL = "24486655";
+        required_device_info.SetIpAddress(CAMERA_IP);
+        // required_device_info.SetSubnetAddress(CAMERA_SUBNET);
+        // required_device_info.SetSubnetMask(CAMERA_SUBNET);  // not sure what the difference here is
+
+        // required_device_info.SetSerialNumber(SERIAL);
+
+        tl_factory.AnnounceRemoteDevice(CAMERA_IP);
+
+        RCLCPP_INFO_STREAM(LOGGER, "Trying to create camera_device object...");
+
+        Pylon::IPylonDevice* camera_device = tl_factory.CreateDevice(required_device_info);
+
+        RCLCPP_INFO_STREAM(LOGGER, "camera_device object created!");
+
+
+
+        // Pylon::DeviceInfoList_t device_list;
+
+        PylonROS2Camera* new_cam_ptr = createFromDevice(BLAZE, camera_device);
+
+        return new_cam_ptr;
+        // new_cam_ptr->device_user_id_ = it->GetUserDefinedName();
         
         // EnumerateDevices() returns the number of devices found
-        if (0 == tl_factory.EnumerateDevices(device_list))
-        {
-            Pylon::PylonTerminate();
-            RCLCPP_ERROR_ONCE(LOGGER, "No available camera device");
-            return nullptr;
-        }
-        else
-        {
-            Pylon::DeviceInfoList_t::const_iterator it;
-            if (device_user_id_to_open.empty())
-            {
-                for (it = device_list.begin(); it != device_list.end(); ++it)
-                {
-                    RCLCPP_INFO_STREAM(LOGGER, "Found camera device!"
-                                            << " Device Model: " << it->GetModelName()
-                                            << " with Device User Id: " << it->GetUserDefinedName());
+        // if (0 == tl_factory.EnumerateDevices(device_list))
+        // {
+        //     Pylon::PylonTerminate();
+        //     RCLCPP_ERROR_ONCE(LOGGER, "No available camera device");
+        //     return nullptr;
+        // }
+        // else
+        // {
+        //     Pylon::DeviceInfoList_t::const_iterator it;
+        //     if (device_user_id_to_open.empty())
+        //     {
+        //         for (it = device_list.begin(); it != device_list.end(); ++it)
+        //         {
+        //             RCLCPP_INFO_STREAM(LOGGER, "Found camera device!"
+        //                                     << " Device Model: " << it->GetModelName()
+        //                                     << " with Device User Id: " << it->GetUserDefinedName());
                     
-                    PYLON_CAM_TYPE cam_type = detectPylonCamType(*it);
-                    if (cam_type != UNKNOWN)
-                    {
-                        //RCLCPP_ERROR_STREAM(LOGGER, "CAM TYPE: " << cam_type);
-                        PylonROS2Camera* new_cam_ptr = createFromDevice(cam_type, tl_factory.CreateDevice(*it));
-                        new_cam_ptr->device_user_id_ = it->GetUserDefinedName();
+        //             PYLON_CAM_TYPE cam_type = detectPylonCamType(*it);
+        //             if (cam_type != UNKNOWN)
+        //             {
+        //                 //RCLCPP_ERROR_STREAM(LOGGER, "CAM TYPE: " << cam_type);
+        //                 PylonROS2Camera* new_cam_ptr = createFromDevice(cam_type, tl_factory.CreateDevice(*it));
+        //                 new_cam_ptr->device_user_id_ = it->GetUserDefinedName();
                         
-                        return new_cam_ptr;
-                    }
-                }
+        //                 return new_cam_ptr;
+        //             }
+        //         }
 
-                Pylon::PylonTerminate();
-                RCLCPP_ERROR_ONCE(LOGGER, "No available compatible camera device");
+        //         Pylon::PylonTerminate();
+        //         RCLCPP_ERROR_ONCE(LOGGER, "No available compatible camera device");
                 
-                return nullptr;
-            }
+        //         return nullptr;
+        //     }
 
-            bool found_desired_device = false;
-            for ( it = device_list.begin(); it != device_list.end(); ++it )
-            {
-                std::string device_user_id_found(it->GetUserDefinedName());
-                if ( (0 == device_user_id_to_open.compare(device_user_id_found)) ||
-                     (device_user_id_to_open.length() < device_user_id_found.length() &&
-                     (0 == device_user_id_found.compare(device_user_id_found.length() -
-                                                         device_user_id_to_open.length(),
-                                                         device_user_id_to_open.length(),
-                                                         device_user_id_to_open) )
-                     )
-                   )
-                {
-                    found_desired_device = true;
-                    break;
-                }
-            }
+        //     bool found_desired_device = false;
+        //     for ( it = device_list.begin(); it != device_list.end(); ++it )
+        //     {
+        //         std::string device_user_id_found(it->GetUserDefinedName());
+        //         if ( (0 == device_user_id_to_open.compare(device_user_id_found)) ||
+        //              (device_user_id_to_open.length() < device_user_id_found.length() &&
+        //              (0 == device_user_id_found.compare(device_user_id_found.length() -
+        //                                                  device_user_id_to_open.length(),
+        //                                                  device_user_id_to_open.length(),
+        //                                                  device_user_id_to_open) )
+        //              )
+        //            )
+        //         {
+        //             found_desired_device = true;
+        //             break;
+        //         }
+        //     }
 
-            if (found_desired_device)
-            {
-                RCLCPP_INFO_STREAM(LOGGER, "Found camera device!"
-                                            << " Device Model: " << it->GetModelName()
-                                            << " with Device User Id: " << device_user_id_to_open);
+        //     if (found_desired_device)
+        //     {
+        //         RCLCPP_INFO_STREAM(LOGGER, "Found camera device!"
+        //                                     << " Device Model: " << it->GetModelName()
+        //                                     << " with Device User Id: " << device_user_id_to_open);
 
-                PYLON_CAM_TYPE cam_type = detectPylonCamType(*it);
-                return createFromDevice(cam_type, tl_factory.CreateDevice(*it));
-            }
-            else
-            {
-                RCLCPP_ERROR_STREAM(LOGGER, "Couldn't find the camera that matches the "
-                    << "specified Device User ID: " << device_user_id_to_open << "! "
-                    << "Either the ID is wrong or the camera device is not connected (yet)");
+        //         PYLON_CAM_TYPE cam_type = detectPylonCamType(*it);
+        //         return createFromDevice(cam_type, tl_factory.CreateDevice(*it));
+        //     }
+        //     else
+        //     {
+        //         RCLCPP_ERROR_STREAM(LOGGER, "Couldn't find the camera that matches the "
+        //             << "specified Device User ID: " << device_user_id_to_open << "! "
+        //             << "Either the ID is wrong or the camera device is not connected (yet)");
                 
-                return nullptr;
-            }
-        }
+        //         return nullptr;
+        //     }
+        // }
     }
     catch (GenICam::GenericException &e)
     {

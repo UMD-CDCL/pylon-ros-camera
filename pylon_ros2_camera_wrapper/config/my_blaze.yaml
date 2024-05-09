@@ -4,11 +4,11 @@
   ros__parameters:
 
     #  The tf frame under which the images were published
-    camera_frame: pylon_camera
+    camera_frame: blaze_camera
 
     #  The DeviceUserID of the camera. If empty, the first camera found in the
     #  device list will be used
-    device_user_id: my_blaze
+    device_user_id: blaze-balto
 
     #  The desired publisher frame rate if listening to the topics.
     #  This parameter can only be set once at startup
@@ -24,7 +24,7 @@
     ##########################################################################
 
     #  The exposure time in microseconds to be set after opening the camera.
-    # exposure: 250.0
+    exposure: 300.0
 
     ##########################################################################
 
