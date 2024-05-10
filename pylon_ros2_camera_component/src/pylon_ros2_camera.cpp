@@ -185,9 +185,10 @@ PylonROS2Camera* PylonROS2Camera::create(const std::string& device_user_id_to_op
         Pylon::PylonInitialize();
         Pylon::CTlFactory& tl_factory = Pylon::CTlFactory::GetInstance();
 
-        // Pylon::ITransportLayer* ptl =  tl_factory.CreateTl(Pylon::BaslerGenTlBlazeDeviceClass);
+        Pylon::ITransportLayer* pTL =  tl_factory.CreateTl(Pylon::BaslerGigEDeviceClass);
+        Pylon::ITransportLayer* pTL_basler =  tl_factory.CreateTl(Pylon::BaslerGenTlBlazeDeviceClass);
 
-        Pylon::IGigETransportLayer* gTL = dynamic_cast<Pylon::IGigETransportLayer*>(tl_factory.CreateTl(Pylon::BaslerGenTlBlazeDeviceClass));
+        Pylon::IGigETransportLayer* gTL = dynamic_cast<Pylon::IGigETransportLayer*>(pTL);
 
         // make sure the GigE transport layer was created
         if (gTL == NULL) {
@@ -196,37 +197,36 @@ PylonROS2Camera* PylonROS2Camera::create(const std::string& device_user_id_to_op
         }
 
         // create a device info object with specified IP
-        Pylon::CDeviceInfo required_device_info = gTL->CreateDeviceInfo();
+        Pylon::CDeviceInfo device_info = pTL_basler->CreateDeviceInfo();
 
         const Pylon::String_t CAMERA_IP = "192.168.50.7";
         // const Pylon::String_t CAMERA_SUBNET = "255.255.255.0";
-        const Pylon::String_t SERIAL = "24486655";
-        // required_device_info.SetIpAddress(CAMERA_IP);
-        // required_device_info.SetSubnetAddress(CAMERA_SUBNET);
-        // required_device_info.SetSubnetMask(CAMERA_SUBNET);  // not sure what the difference here is
+        // const Pylon::String_t SERIAL = "24486655";
+        // device_info.SetIpAddress(CAMERA_IP);
+        // device_info.SetSubnetAddress(CAMERA_SUBNET);
+        // device_info.SetSubnetMask(CAMERA_SUBNET);  // not sure what the difference here is
 
-        required_device_info.SetSerialNumber(SERIAL);
+        // device_info.SetSerialNumber(SERIAL);
 
-        gTL->AnnounceRemoteDevice(CAMERA_IP);
+        gTL->AnnounceRemoteDevice("192.168.50.7", &device_info);
 
-        //tl_factory.AnnounceRemoteDevice(CAMERA_IP);
+        RCLCPP_INFO_STREAM(LOGGER, "Remote device found with IP: " << device_info.GetIpAddress());
+        RCLCPP_INFO_STREAM(LOGGER, "Remote device has serial: " << device_info.GetSerialNumber());
 
         RCLCPP_INFO_STREAM(LOGGER, "Trying to create camera_device object...");
 
-        Pylon::IPylonDevice* camera_device = tl_factory.CreateDevice(required_device_info);
+        Pylon::IPylonDevice* camera_device = tl_factory.CreateDevice(device_info);
 
         RCLCPP_INFO_STREAM(LOGGER, "camera_device object created!");
 
+        PylonROS2Camera* new_cam_ptr = createFromDevice(GIGE, camera_device);
+
+        return new_cam_ptr;  
 
 
         // Pylon::DeviceInfoList_t device_list;
-
-        PylonROS2Camera* new_cam_ptr = createFromDevice(BLAZE, camera_device);
-
-        return new_cam_ptr;
-        // new_cam_ptr->device_user_id_ = it->GetUserDefinedName();
         
-        // EnumerateDevices() returns the number of devices found
+        // // EnumerateDevices() returns the number of devices found
         // if (0 == tl_factory.EnumerateDevices(device_list))
         // {
         //     Pylon::PylonTerminate();
